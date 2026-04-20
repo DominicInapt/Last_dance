@@ -27,13 +27,16 @@ services:
 	#Suggested so that it can live update instead of rebuilding docker image.
 	volumes:
 	  - .:/backend 
+	  - ./spark-apps:/opt/bitnami/spark/apps:rw
     ports:
       - "5000:5000"
 	env_file:
 	 - .env
+	#Needs to be able to write to the sparks_apps_dir as well.
     environment:
       - DATABASE_URL=mysql+pymysql://root:${DB_PASSWORD}@db/my_database
-    depends_on:
+	  - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
+	depends_on:
       db:
         condition: service_healthy
 
@@ -68,6 +71,8 @@ services:
       - SPARK_WORKER_CORES=1
       - SPARK_WORKER_MEMORY=1G
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
+	volumes:
+	  - ./spark-apps:/opt/bitnami/spark/apps
     depends_on:
       - spark-master
 volumes:

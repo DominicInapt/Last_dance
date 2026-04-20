@@ -5,8 +5,8 @@ import os
 from celery import shared_task
 from .models import SparkExperiment, Script
 
+SHARED_DIR = os.environ.get('SPARK_SHARED_DIR', '/opt/bitnami/spark')
 
-@shared_task
 # experiments/tasks.py
 @shared_task
 def run_db_script(experiment_id):
@@ -16,14 +16,17 @@ def run_db_script(experiment_id):
     experiment.output = ""
     experiment.save()
 
-    with tempfile.NamedTemporaryFile(suffix=f".{experiment.script.file_type}", delete=False) as tmp:
-        #Grab script from the relate db
-        tmp.write(experiment.script.content)
-        tmp_path = tmp.name
+    # Define the shared directory path.
+    filename = f"experiment_{experiment.id}.{experiment.script.file_type}"
+    tmp_path = os.path.join(SHARED_DIR, filename)
 
     try:
-        #Appends a main-class argument if its a jar
-        cmd = ['spark-submit', '--master', 'local[*]', tmp_path]
+        # Write the script content directly to the shared volume
+        with open(tmp_path, 'w' if experiment.script.file_type != 'jar' else 'wb') as f:
+            f.write(experiment.script.content)
+
+        # Update master to the service name and use the container path
+        cmd = ['spark-submit', '--master', 'spark://spark-master:7077', tmp_path]
 
         if experiment.script.file_type == 'jar' and experiment.script.main_class:
             cmd.extend(['--class', experiment.script.main_class])
