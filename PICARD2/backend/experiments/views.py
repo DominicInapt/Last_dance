@@ -1,4 +1,6 @@
 # experiments/views.py
+import os
+
 from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -40,12 +42,18 @@ def upload_script(request):
     file = request.FILES.get('script')
     # User can optionally pass access_level in the request
     access = request.data.get('access_level', Script.PRIVATE)
+    main_class = request.data.get('main_class') # Will be None if not provided
+
+    _, extension = os.path.splitext(file.name)
+    file_type = extension.lstrip('.').lower()  # Remove the dot and normalize to lowercase
 
     script = Script.objects.create(
         user=request.user,
         name=file.name,
+        file_type=file_type,
         content=file.read().encode('utf-8'),
-        access_level=access
+        access_level=access,
+        main_class = main_class
     )
     return JsonResponse({"script_id": script.id, "access_level": script.access_level})
 
