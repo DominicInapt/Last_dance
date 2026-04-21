@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Avenir Next', 'Trebuchet MS', 'Gill Sans', sans-serif;
+  --wvu-blue: #002855;
+  --wvu-blue-deep: #001b44;
+  --wvu-gold: #eaaa00;
+  --wvu-gold-soft: #ffd46a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(circle at 17% 19%, rgba(234, 170, 0, 0.24), transparent 34%),
+    radial-gradient(circle at 83% 11%, rgba(255, 212, 106, 0.14), transparent 30%),
+    repeating-radial-gradient(
+      circle at 24% 74%,
+      rgba(237, 244, 255, 0.08) 0 2px,
+      transparent 2px 18px
+    ),
+    repeating-radial-gradient(
+      circle at 74% 30%,
+      rgba(213, 228, 255, 0.07) 0 1px,
+      transparent 1px 14px
+    ),
+    linear-gradient(160deg, var(--wvu-blue) 0%, #003a8c 56%, var(--wvu-blue-deep) 100%);
+  color: #f8fafc;
+}
