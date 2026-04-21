@@ -44,6 +44,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: bubble-app1
+    #Unfixed it and then fixed it :)
     ports:
       - "3000:80"
     restart: always
