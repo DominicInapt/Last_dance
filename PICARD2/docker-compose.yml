@@ -40,15 +40,15 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bubble-app1
     ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_BACKEND_URL=http://localhost:5000
-    #Might delete
-    stdin_open: true # For interactive shells if using Create React App
-    #Makes it somewhat persistent.
-    tty: true
+      - "3000:80"
+    restart: always
+    depends_on:
+      - backend
 
   spark-master:
     image: apache/spark:3.5.8-scala2.12-java17-python3-ubuntu
