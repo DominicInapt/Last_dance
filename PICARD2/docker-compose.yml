@@ -7,36 +7,35 @@ services:
     #Persistent storage for mysql server
     volumes:
       - db_data:/var/lib/mysql
-    #Establishes passwords and names
-    env_file:
+	#Establishes passwords and names
+	env_file:
       - .env
-    #Not hardcoded, sourced from .env
-    ports:
+	#Not hardcoded, sourced from .env
+	ports:
       - "${MYSQL_PORT}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
-
   backend:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
-    #Always bring it up again
+	command: python manage.py runserver 0.0.0.0:8000
+	#Always bring it up again
     restart: always
-    #Suggested so that it can live update instead of rebuilding docker image.
-    volumes:
-      - .:/backend 
-      - ./spark-apps:/opt/bitnami/spark/apps:rw
+	#Suggested so that it can live update instead of rebuilding docker image.
+	volumes:
+	  - .:/backend 
+	  - ./spark-apps:/opt/bitnami/spark/apps:rw
     ports:
       - "5000:5000"
-    env_file:
-      - .env
-    #Needs to be able to write to the sparks_apps_dir as well.
+	env_file:
+	 - .env
+	#Needs to be able to write to the sparks_apps_dir as well.
     environment:
       - DATABASE_URL=mysql+pymysql://root:${DB_PASSWORD}@db/my_database
-      - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
-    depends_on:
+	  - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
+	depends_on:
       db:
         condition: service_healthy
 
@@ -46,11 +45,12 @@ services:
       - "3000:3000"
     environment:
       - REACT_APP_BACKEND_URL=http://localhost:5000
-    #Might delete
+	#Might delete
     stdin_open: true # For interactive shells if using Create React App
-    #Makes it somewhat persistent.
+	#Makes it somewhat persistent.
     tty: true
-
+	
+	
   spark-master:
     image: bitnami/spark:3.5
     environment:
@@ -70,8 +70,8 @@ services:
       - SPARK_WORKER_CORES=1
       - SPARK_WORKER_MEMORY=1G
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
-    volumes:
-      - ./spark-apps:/opt/bitnami/spark/apps
+	volumes:
+	  - ./spark-apps:/opt/bitnami/spark/apps
     depends_on:
       - spark-master
 volumes:
