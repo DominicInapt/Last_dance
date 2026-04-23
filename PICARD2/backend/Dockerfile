@@ -7,11 +7,24 @@ WORKDIR /app
 # Install system dependencies (like Java for Spark if needed)
 RUN apt-get update && apt-get install -y default-jre
 
-# Download and install Spark binaries
-ENV SPARK_VERSION=3.5.8
-RUN wget https://apache.org && \
-    tar -xzf spark-$SPARK_VERSION-bin-hadoop3.tgz && \
-    mv spark-$SPARK_VERSION-bin-hadoop3 /opt/spark
+#Allows it to communicate with the MYSQL service
+RUN apt-get update && apt-get install -y \
+    default-libmysqlclient-dev \
+    build-essential \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install mysqlclient
+
+#SPARK IS INSTALLED SOLELY SO THAT THE COMMAND IS RECOGNIZED
+#SPARK IS NOT RUN HERE
+# 1. Install a minimal JRE (required for Spark)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends default-jre && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 2. Install PySpark
+RUN pip install --no-cache-dir pyspark==3.5.0
 
 # Install Python requirements
 COPY requirements.txt .

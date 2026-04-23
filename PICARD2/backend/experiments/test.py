@@ -24,4 +24,25 @@
 # - Check scripts. Not allowed
 # - Check experiments. Not allowed
 
-# :(
+import requests
+
+# 1. Set your local or production endpoint
+url = "http://localhost:5000"
+
+# 2. Define the data you want to send
+data = {
+    "username": "testuser",
+    "password": "testpassword123"
+}
+
+# 3. Send the POST request using the 'json' parameter
+# This automatically sets Content-Type to 'application/json'
+response = requests.post(url + "/user_login/", json=data)
+
+# 4. Check the results
+if response.status_code == 200:
+    print("Success:", response.json())
+else:
+    print(f"Failed (Status {response.status_code}):")
+    print(response)
+

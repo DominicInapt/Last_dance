@@ -1,7 +1,7 @@
 # experiments/views.py
 import os
 
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login
 from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -38,7 +38,7 @@ def get_experiment_detail(request, experiment_id):
 #3. POST: Sign a user into the database.
 @api_view(['POST'])
 @permission_classes([AllowAny]) # Allows anyone to access the signup page
-def signup_view(request):
+def signup(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
@@ -54,7 +54,7 @@ def signup_view(request):
 #4. POST: Log a user into the system.
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def login(request):
+def user_login(request):
     username = request.data.get('username')
     password = request.data.get('password')
 
