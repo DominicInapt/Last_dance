@@ -39,10 +39,17 @@ def run_db_script(experiment_id):
             text=True
         )
 
-        # Read line by line as it happens
+        # 2. Optimized Logging (Buffer lines)
+        log_buffer = []
         for line in iter(process.stdout.readline, ''):
-            experiment.output += line
-            experiment.save(update_fields=['output']) # Optimized update
+            log_buffer.append(line)
+            # Save every 20 lines to reduce DB load
+            if len(log_buffer) >= 20:
+                experiment.output += "".join(log_buffer)
+                experiment.save(update_fields=['output'])
+                log_buffer = []
+        experiment.output += "".join(log_buffer)
+        experiment.save(update_fields=['output'])
 
         process.wait()
         experiment.status = 'Success' if process.returncode == 0 else 'Failed'

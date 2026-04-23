@@ -1,13 +1,14 @@
 # experiments/views.py
 import os
 
+from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import SparkExperiment, Script, CSVDataset
 from .tasks import run_db_script
-from .serializers import CSVDatasetSerializer
+from .serializers import CSVDatasetSerializer, UserSerializer
 
 
 # 1. GET: List all experiments for the logged-in user
@@ -34,8 +35,37 @@ def get_experiment_detail(request, experiment_id):
         })
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
+#3. POST: Sign a user into the database.
+@api_view(['POST'])
+@permission_classes([AllowAny]) # Allows anyone to access the signup page
+def signup_view(request):
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        return JsonResponse({
+            "message": "User created successfully",
+            "user": {
+                "username": user.username,
+                "email": user.email
+            }
+        }, status=201)
 
-# 3. POST: Upload and save script to DB
+    return JsonResponse(serializer.errors, status=400)
+#4. POST: Log a user into the system.
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    user = authenticate(username=username, password=password)
+
+    if user is not None:
+        login(request, user)
+        return JsonResponse({"status": "login success"}, status=200)
+    return JsonResponse({"status": "login failed"}, status=401)
+
+# 5. POST: Upload and save script to DB
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_script(request):
@@ -57,8 +87,7 @@ def upload_script(request):
     )
     return JsonResponse({"script_id": script.id, "access_level": script.access_level})
 
-
-# 4. POST: Trigger the Spark run for an existing ID
+# 6. POST: Trigger the Spark run for an existing ID
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def run_experiment(request, script_id):
@@ -75,7 +104,6 @@ def run_experiment(request, script_id):
         )
 
         # Validate Dataset permissions (Mine OR Public)
-        # Note: 'access_modifier' is what we named it in your CSVDataset model
         dataset = CSVDataset.objects.get(
             Q(id=dataset_id) & (Q(user=request.user) | Q(access_modifier='public'))
         )
@@ -95,7 +123,7 @@ def run_experiment(request, script_id):
     except Script.DoesNotExist:
         return JsonResponse({"error": "Script not found"}, status=404)
 
-#5. POST: Upload a dataset to the backend.
+#7. POST: Upload a dataset to the backend.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_csv(request):

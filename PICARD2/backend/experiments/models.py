@@ -71,3 +71,4 @@ class SparkExperiment(models.Model):
     status = models.CharField(max_length=20, default='Pending')
     output = models.TextField(default="") # Stores the live logs
     created_at = models.DateTimeField(auto_now_add=True)
+    #TODO add results file.

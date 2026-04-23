@@ -38,7 +38,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+  celery_worker:
+    build: ./backend
+    command: celery -A backend_config worker --concurrency=1 --loglevel=info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - backend
+    # We keep resources low since it's just "managing" the Spark service
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+  # 3. The Message Broker (Required for Celery)
+  redis:
+    image: redis:alpine
   frontend:
     build: 
       context: ./frontend

@@ -7,6 +7,12 @@ WORKDIR /app
 # Install system dependencies (like Java for Spark if needed)
 RUN apt-get update && apt-get install -y default-jre
 
+# Download and install Spark binaries
+ENV SPARK_VERSION=3.5.8
+RUN wget https://apache.org && \
+    tar -xzf spark-$SPARK_VERSION-bin-hadoop3.tgz && \
+    mv spark-$SPARK_VERSION-bin-hadoop3 /opt/spark
+
 # Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
