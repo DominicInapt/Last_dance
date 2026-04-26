@@ -77,7 +77,9 @@ services:
       - "8080:8080" # Spark Master Web UI
       - "7077:7077" # Spark Master service port
     volumes:
-      - ./spark-apps:/opt/bitnami/spark/apps # Mount your Python scripts here
+      - ./spark-apps:/opt/spark/apps # Official image uses /opt/spark/
+    command: /opt/spark/sbin/../bin/spark-class org.apache.spark.deploy.master.Master
+
 
   spark-worker:
     image: apache/spark:3.5.8-scala2.12-java17-python3-ubuntu
@@ -87,8 +89,12 @@ services:
       - SPARK_WORKER_CORES=1
       - SPARK_WORKER_MEMORY=1G
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
+    ports:
+      - "8081:8081"
     volumes:
-      - ./spark-apps:/opt/bitnami/spark/apps
+      - ./spark-apps:/opt/spark/apps
+    command: /opt/spark/sbin/../bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+  
     depends_on:
       - spark-master
 volumes:
