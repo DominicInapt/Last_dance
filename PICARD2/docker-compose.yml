@@ -7,9 +7,6 @@ services:
     #Persistent storage for mysql server
     volumes:
       - db_data:/var/lib/mysql
-    #Establishes passwords and names
-    env_file:
-      - .env.txt
     #Not hardcoded, sourced from .env
     ports:
       - "${MYSQL_PORT}:3306"
@@ -29,8 +26,6 @@ services:
       - ./spark-apps:/opt/bitnami/spark/apps:rw
     ports:
       - "5000:5000"
-    env_file:
-      - .env.txt
     #Needs to be able to write to the sparks_apps_dir as well.
     environment:
       - DATABASE_URL=mysql+pymysql://root:${DB_PASSWORD}@db/my_database
