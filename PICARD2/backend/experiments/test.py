@@ -23,26 +23,43 @@
 # - Check datasets. Not allowed
 # - Check scripts. Not allowed
 # - Check experiments. Not allowed
-
 import requests
+
+
 
 # 1. Set your local or production endpoint
 url = "http://localhost:5000"
 
 # 2. Define the data you want to send
-data = {
+login_data = {
     "username": "testuser",
     "password": "testpassword123"
 }
+def test_login(data):
+    # 3. Send the POST request using the 'json' parameter
+    # This automatically sets Content-Type to 'application/json'
+    response = requests.post(url + "/user_login/", json=data)
 
-# 3. Send the POST request using the 'json' parameter
-# This automatically sets Content-Type to 'application/json'
-response = requests.post(url + "/user_login/", json=data)
+    # 4. Check the results
+    if response.status_code == 200:
+        print("Success:", response.json())
+    else:
+        print(f"Failed login (Status {response.status_code}):")
+        print(response)
 
-# 4. Check the results
-if response.status_code == 200:
-    print("Success:", response.json())
-else:
-    print(f"Failed (Status {response.status_code}):")
-    print(response)
+def test_signup(data):
+    response = requests.post(url, json=data)
 
+    response = requests.post(url + "/signup/", json=data)
+
+    if response.status_code == 200:
+        print("Success:", response.json())
+    else:
+        print(f"Failed signup (Status {response.status_code}):")
+        print(response)
+
+test_login(login_data)
+test_signup(login_data)
+test_login(login_data)
+
+print("Yippeee")

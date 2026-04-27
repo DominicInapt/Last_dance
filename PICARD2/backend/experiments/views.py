@@ -35,6 +35,7 @@ def get_experiment_detail(request, experiment_id):
         })
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
+
 #3. POST: Sign a user into the database.
 @api_view(['POST'])
 @permission_classes([AllowAny]) # Allows anyone to access the signup page
