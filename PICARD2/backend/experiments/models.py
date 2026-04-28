@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 PRIVATE = 'private'
 PUBLIC = 'public'
 
-
 class Script(models.Model):
     # Types
     PYTHON = 'py'
@@ -53,7 +52,6 @@ class CSVDataset(models.Model):
         on_delete=models.CASCADE,
         related_name='datasets'
     )
-    file = models.FileField(upload_to='data/')
     access_modifier = models.CharField(
         max_length=10,
         choices=ACCESS_CHOICES,
@@ -61,14 +59,23 @@ class CSVDataset(models.Model):
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    # helper method so you can easily retrieve the path
+    def get_file_path(self):
+        return f"data/{self.id}.csv"
+
     def __str__(self):
-        return f"{self.file.name} ({self.user.username})"
+        return f"Dataset {self.id} ({self.user.username})"
 
 class SparkExperiment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='runs')
-    dataset = models.ForeignKey(CSVDataset, on_delete=models.CASCADE)
+    dataset = models.ForeignKey(CSVDataset, on_delete=models.CASCADE, null=True, blank=True)
     status = models.CharField(max_length=20, default='Pending')
     output = models.TextField(default="") # Stores the live logs
     created_at = models.DateTimeField(auto_now_add=True)
-    #TODO add results file.
+
+    def get_results_path(self):
+        return f"results/{self.id}.txt"
+
+    def __str__(self):
+        return f"Experiment {self.id} ({self.status})"

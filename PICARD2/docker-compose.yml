@@ -4,12 +4,14 @@ services:
   db:
     image: mysql:8.0
     restart: always
+    env_file:             
+      - .env
     #Persistent storage for mysql server
     volumes:
       - db_data:/var/lib/mysql
     #Not hardcoded, sourced from .env
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -20,9 +22,11 @@ services:
     command: python manage.py runserver 0.0.0.0:5000
     #Always bring it up again
     restart: always
+    env_file:             
+      - .env
     #Suggested so that it can live update instead of rebuilding docker image.
     volumes:
-      - .:/backend 
+      - ./backend:/app
       - ./spark-apps:/opt/bitnami/spark/apps:rw
     ports:
       - "5000:5000"
@@ -36,6 +40,8 @@ services:
   celery_worker:
     build: ./backend
     command: celery -A backend_config worker --concurrency=1 --loglevel=info
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
     depends_on:
