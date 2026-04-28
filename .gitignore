@@ -9,4 +9,5 @@ venv/
 .venv/
 
 .env
-
+PICARD2/.env
+PICARD2/backend/.env
