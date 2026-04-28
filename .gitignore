@@ -8,4 +8,6 @@ __pycache__/
 venv/
 .venv/
 
-*csv
+.env
+PICARD2/.env
+PICARD2/backend/.env

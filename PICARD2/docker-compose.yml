@@ -1,17 +1,14 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
     restart: always
-    env_file:             
-      - .env
+    env_file:
+      - ./backend/.env
     #Persistent storage for mysql server
     volumes:
       - db_data:/var/lib/mysql
-    #Not hardcoded, sourced from .env
     ports:
-      - "3307:3306"
+      - "${MYSQL_PORT}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -19,20 +16,18 @@ services:
       retries: 5
   backend:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:5000
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:5000"
     #Always bring it up again
     restart: always
-    env_file:             
-      - .env
     #Suggested so that it can live update instead of rebuilding docker image.
     volumes:
-      - ./backend:/app
+      - .:/backend 
       - ./spark-apps:/opt/bitnami/spark/apps:rw
     ports:
       - "5000:5000"
-    #Needs to be able to write to the sparks_apps_dir as well.
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=mysql+pymysql://root:${DB_PASSWORD}@db/my_database
       - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
     depends_on:
       db:
@@ -40,10 +35,10 @@ services:
   celery_worker:
     build: ./backend
     command: celery -A backend_config worker --concurrency=1 --loglevel=info
-    env_file:
-      - .env
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
     depends_on:
       - db
       - redis

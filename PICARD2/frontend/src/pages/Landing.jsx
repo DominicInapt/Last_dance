@@ -16,15 +16,15 @@ function centerSpawn(index, total) {
 }
 
 export default function Landing() {
-  const { isAuthenticated, login, logout } = useAuth()
+  const { authError, isAuthenticated, isLoading, login, logout } = useAuth()
 
   const bubbles = useMemo(() => {
     const publicNodes = [
       { label: 'About', to: '/about', radius: 58 },
-      { label: 'Login', onClick: login, radius: 62 },
+      { label: 'GitHub Login', onClick: login, radius: 68 },
     ]
 
-    if (!isAuthenticated) {
+    if (isLoading || !isAuthenticated) {
       return publicNodes
     }
 
@@ -41,6 +41,11 @@ export default function Landing() {
     <main className="h-screen w-full bg-transparent text-zinc-100">
       <PhysicsWorld className="h-full w-full bg-transparent">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(234,170,0,0.2),rgba(0,0,0,0)_46%)]" />
+        {authError ? (
+          <div className="pointer-events-none absolute left-1/2 top-8 z-30 w-[min(92vw,30rem)] -translate-x-1/2 rounded-2xl border border-red-300/40 bg-red-950/65 px-4 py-3 text-center text-sm text-red-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
+            {authError}
+          </div>
+        ) : null}
         {bubbles.map((bubble, index) => (
           <BubbleNode
             key={bubble.label}
