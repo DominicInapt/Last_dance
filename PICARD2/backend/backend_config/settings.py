@@ -32,10 +32,16 @@ def _split_csv_env(name, default=''):
 
 ALLOWED_HOSTS = _split_csv_env('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0')
 
+# Media files (User-uploaded datasets, scripts, etc.)
+MEDIA_URL = '/media/'
 STATIC_URL = '/static/'
 ROOT_URLCONF = 'backend_config.urls'
 WSGI_APPLICATION = 'backend_config.wsgi.application'
 
+
+# Point the MEDIA_ROOT to the shared Docker volume.
+# We use a fallback to a local 'media' folder so it doesn't crash if run outside Docker.
+MEDIA_ROOT = os.environ.get('SPARK_SHARED_DIR', os.path.join(BASE_DIR, 'media'))
 INSTALLED_APPS = [
     # 1. Default Django apps (Core functionality)
     'django.contrib.admin',
@@ -51,6 +57,9 @@ INSTALLED_APPS = [
 
     # 3. Your local apps
     'experiments',                  # <-- Tells Django where to find your models and views
+    'authentication',
+    'datasets',
+    'scripts'
 ]
 
 MIDDLEWARE = [
