@@ -1,62 +1,57 @@
 import os
 
+from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from .models import CSVDataset, PRIVATE, PUBLIC
+from .serializers import CSVDatasetSerializer
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_csv(request):
-    # 1. Get the file and optional access modifier from the request
-    uploaded_file = request.FILES.get('file') # Make sure your frontend sends it as 'file'
-    access_level = request.data.get('access_level', PRIVATE)
+    serializer = CSVDatasetSerializer(data=request.data)
 
-    if not uploaded_file:
-        return JsonResponse({
-            'status': 'error',
-            'errors': {'file': ['No file was submitted.']}
-        }, status=400)
+    if serializer.is_valid():
+        # Fallback: if 'name' isn't explicitly sent in the form data, use the filename
+        uploaded_file = request.FILES.get('file')
+        dataset_name = request.data.get('name', uploaded_file.name)
 
-    try:
-        # 2. Save the database record first to generate the primary key (ID)
-        dataset = CSVDataset.objects.create(
-            user=request.user,
-            name = uploaded_file.name,
-            access_level = access_level
-        )
-
-        # 3. Ensure the 'data/' directory exists
-        data_dir = 'data'
-        os.makedirs(data_dir, exist_ok=True)
-
-        # 4. Generate the path dynamically: data/<ID>.csv
-        file_path = dataset.get_file_path()
-
-        # 5. Write the file to disk manually in chunks (to prevent memory bloat with large CSVs)
-        with open(file_path, 'wb+') as destination:
-            for chunk in uploaded_file.chunks():
-                destination.write(chunk)
+        # Save the dataset to the DB and disk simultaneously
+        serializer.save(user=request.user, name=dataset_name)
 
         return JsonResponse({
             'status': 'success',
             'message': 'File uploaded successfully',
-            'data': {
-                'id': dataset.id,
-                'name': dataset.name,
-                'path': file_path,
-                'access_modifier': dataset.access_modifier
-            }
+            'data': serializer.data
         }, status=201)
 
-    except Exception as e:
-        # If writing the file fails, consider deleting the database record so it doesn't get orphaned
-        if 'dataset' in locals():
-            dataset.delete()
-        return JsonResponse({
-            'status': 'error',
-            'errors': str(e)
-        }, status=500)
+    return JsonResponse({
+        'status': 'error',
+        'errors': serializer.errors
+    }, status=400)
 
-#TODO add a view all datasets (personal or public)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_datasets(request):
+    """
+    Returns a list of datasets that are either owned by the user or marked as public.
+    """
+    # Use Q objects to perform an OR query: (My Datasets) OR (Public Datasets)
+    datasets = CSVDataset.objects.filter(
+        Q(user=request.user) | Q(access_level=PUBLIC)
+    ).order_by('-uploaded_at') # Order by newest first
+
+    # Construct a simple list containing just the requested data
+    dataset_data = []
+    for ds in datasets:
+        dataset_data.append({
+            "id": ds.id,
+            "name": ds.name,
+            "access_level": ds.access_level,
+            "owner": ds.user.username # Helpful for the frontend to distinguish ownership
+        })
+
+    return JsonResponse(dataset_data, status=200)

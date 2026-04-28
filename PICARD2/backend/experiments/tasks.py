@@ -29,6 +29,11 @@ def run_db_script(experiment_id):
         if experiment.script.file_type == 'jar' and experiment.script.main_class:
             cmd.extend(['--class', experiment.script.main_class])
 
+        #TODO update scripts so they observe this standard.
+        # FIXED: Pass the dataset path as the first argument to the script
+        if experiment.dataset and experiment.dataset.file:
+            cmd.append(experiment.dataset.get_file_path())
+
         # Start process with piped output
         process = subprocess.Popen(
             cmd,

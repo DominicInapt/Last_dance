@@ -7,7 +7,7 @@ class CSVDatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = CSVDataset
         # We exclude 'user' because we'll inject it from the request
-        fields = ['id', 'name', 'file', 'access_modifier', 'uploaded_at']
+        fields = ['id', 'name', 'file', 'access_level', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_at']
     def validate_file(self, value):
         """
