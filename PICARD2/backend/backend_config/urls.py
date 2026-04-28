@@ -7,5 +7,5 @@ urlpatterns = [
     path('', include('experiments.urls')),
     path('scripts/', include('scripts.urls')),
     path('datasets/', include('datasets.urls')),
-    path('datasets/', include('authentication.urls'))
+    path('auth/', include('authentication.urls'))
 ]

@@ -42,7 +42,7 @@ user_data = {
 
 def test_signup():
     print("\n--- 1. Signing up ---")
-    response = session.post(f"{base_url}/signup/", json=user_data)
+    response = session.post(f"{base_url}/auth/signup/", json=user_data)
 
     if response.status_code in [200, 201]:
         print("✅ Success:", response.json())
@@ -56,7 +56,7 @@ def test_login():
         "username": user_data["username"],
         "password": user_data["password"]
     }
-    response = session.post(f"{base_url}/user_login/", json=login_data)
+    response = session.post(f"{base_url}/auth/user_login/", json=login_data)
 
     if response.status_code == 200:
         print("✅ Success:", response.json())
@@ -79,7 +79,7 @@ def test_upload_dataset():
         # 'file' matches the request.FILES.get('file') in views.py
         files = {'file': (filename, f, 'text/csv')}
         data = {'access_modifier': 'private'}
-        response = session.post(f"{base_url}/upload/csv/", files=files, data=data)
+        response = session.post(f"{base_url}/datasets/upload/csv/", files=files, data=data)
 
     os.remove(filename)  # Clean up the dummy file
 
@@ -103,7 +103,7 @@ def test_upload_script():
         # 'script' matches the request.FILES.get('script') in views.py
         files = {'script': (filename, f, 'text/x-python')}
         data = {'access_level': 'private'}
-        response = session.post(f"{base_url}/upload/script/", files=files, data=data)
+        response = session.post(f"{base_url}/datasets/upload/script/", files=files, data=data)
 
     os.remove(filename)  # Clean up the dummy file
 
