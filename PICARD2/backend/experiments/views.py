@@ -4,7 +4,10 @@ from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import SparkExperiment, Script, CSVDataset, PRIVATE, PUBLIC
+
+from datasets.models import CSVDataset
+from scripts.models import Script
+from .models import SparkExperiment, PUBLIC
 from .tasks import run_db_script
 
 # 1. GET: Allows for the frontend to watch an experiments results
@@ -36,7 +39,7 @@ def run_script(request, script_id):
 
         # Validate Dataset permissions (Mine OR Public)
         dataset = CSVDataset.objects.get(
-            Q(id=dataset_id) & (Q(user=request.user) | Q(access_modifier=PUBLIC))
+            Q(id=dataset_id) & (Q(user=request.user) | Q(access_level=PUBLIC))
         )
 
         # Create the experiment on the fly
@@ -95,7 +98,7 @@ def create_experiment(request):
         dataset = None
         if dataset_id:
             dataset = CSVDataset.objects.get(
-                Q(id=dataset_id) & (Q(user=request.user) | Q(access_modifier=PUBLIC))
+                Q(id=dataset_id) & (Q(user=request.user) | Q(access_level=PUBLIC))
             )
 
         # Construct the experiment

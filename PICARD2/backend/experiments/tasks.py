@@ -1,9 +1,8 @@
 # experiments/tasks.py
 import subprocess
 import os
-import shutil
 from celery import shared_task
-from .models import SparkExperiment, Script
+from .models import SparkExperiment
 
 # As defined in the docker-compose.yml
 SHARED_DIR = os.environ.get('SPARK_SHARED_DIR', '/opt/spark/apps')

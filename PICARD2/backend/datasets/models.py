@@ -17,6 +17,9 @@ class CSVDataset(models.Model):
         on_delete=models.CASCADE,
         related_name='datasets'
     )
+
+    name = models.CharField(max_length=255, default="Unnamed Dataset")
+
     access_level = models.CharField(
         max_length=10,
         choices=ACCESS_CHOICES,
@@ -29,4 +32,4 @@ class CSVDataset(models.Model):
         return f"data/{self.id}.csv"
 
     def __str__(self):
-        return f"Dataset {self.id} ({self.user.username})"
+        return f"{self.name} ({self.user.username})"

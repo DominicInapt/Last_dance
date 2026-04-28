@@ -4,16 +4,14 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from datasets.models import PRIVATE, PUBLIC
-from experiments.models import CSVDataset
-
+from .models import CSVDataset, PRIVATE, PUBLIC
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_csv(request):
     # 1. Get the file and optional access modifier from the request
     uploaded_file = request.FILES.get('file') # Make sure your frontend sends it as 'file'
-    access_modifier = request.data.get('access_modifier', PRIVATE)
+    access_level = request.data.get('access_level', PRIVATE)
 
     if not uploaded_file:
         return JsonResponse({
@@ -25,7 +23,8 @@ def upload_csv(request):
         # 2. Save the database record first to generate the primary key (ID)
         dataset = CSVDataset.objects.create(
             user=request.user,
-            access_modifier=access_modifier
+            name = uploaded_file.name,
+            access_level = access_level
         )
 
         # 3. Ensure the 'data/' directory exists
@@ -45,6 +44,7 @@ def upload_csv(request):
             'message': 'File uploaded successfully',
             'data': {
                 'id': dataset.id,
+                'name': dataset.name,
                 'path': file_path,
                 'access_modifier': dataset.access_modifier
             }

@@ -41,6 +41,9 @@ INSTALLED_APPS = [
 
     # 3. Your local apps
     'experiments',                  # <-- Tells Django where to find your models and views
+    'authentication',
+    'datasets',
+    'scripts'
 ]
 
 MIDDLEWARE = [
