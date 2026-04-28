@@ -103,7 +103,7 @@ def test_upload_script():
         # 'script' matches the request.FILES.get('script') in views.py
         files = {'script': (filename, f, 'text/x-python')}
         data = {'access_level': 'private'}
-        response = session.post(f"{base_url}/datasets/upload/script/", files=files, data=data)
+        response = session.post(f"{base_url}/scripts/upload/", files=files, data=data)
 
     os.remove(filename)  # Clean up the dummy file
 
@@ -121,7 +121,7 @@ def test_run_experiment(script_id, dataset_id):
     payload = {"dataset_id": dataset_id}
 
     # Note: URL pattern uses the script ID
-    response = session.post(f"{base_url}/scripts/{script_id}/run/", json=payload)
+    response = session.post(f"{base_url}/experiments/{script_id}/run_script/", json=payload)
 
     if response.status_code in [200, 201]:
         print("✅ Success:", response.json())
