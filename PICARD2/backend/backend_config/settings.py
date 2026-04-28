@@ -1,14 +1,17 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-from django.conf.global_settings import STATIC_URL
-
-#TODO change in production
-DEBUG = True
-SECRET_KEY = 'django-insecure-this-is-just-for-local-testing-change-in-prod'
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
+
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-this-is-just-for-local-testing-change-in-prod',
+)
 
 DATABASES = {
     'default': {
@@ -22,10 +25,16 @@ DATABASES = {
 }
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+def _split_csv_env(name, default=''):
+    raw_value = os.environ.get(name, default)
+    return [item.strip() for item in raw_value.split(',') if item.strip()]
+
+
+ALLOWED_HOSTS = _split_csv_env('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0')
 
 STATIC_URL = '/static/'
 ROOT_URLCONF = 'backend_config.urls'
+WSGI_APPLICATION = 'backend_config.wsgi.application'
 
 INSTALLED_APPS = [
     # 1. Default Django apps (Core functionality)
@@ -37,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # 2. Third-party apps
+    'corsheaders',
     'rest_framework',               # <-- Required for your serializers and JsonResponse
 
     # 3. Your local apps
@@ -45,6 +55,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware', # Manages user sessions
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,6 +63,35 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware', # Manages popup alerts
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+frontend_local_url = os.environ.get('FRONTEND_LOCAL_URL', 'http://localhost:3000').rstrip('/')
+frontend_remote_url = os.environ.get('FRONTEND_REMOTE_URL', '').rstrip('/')
+
+CORS_ALLOWED_ORIGINS = [url for url in [frontend_local_url, frontend_remote_url] if url]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+GITHUB_OAUTH_APPS = {
+    'local': {
+        'client_id': os.environ.get('GITHUB_OAUTH_LOCAL_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GITHUB_OAUTH_LOCAL_CLIENT_SECRET', ''),
+        'frontend_url': frontend_local_url,
+    },
+    'remote': {
+        'client_id': os.environ.get('GITHUB_OAUTH_REMOTE_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GITHUB_OAUTH_REMOTE_CLIENT_SECRET', ''),
+        'frontend_url': frontend_remote_url,
+    },
+}
+
+GITHUB_OAUTH_SCOPE = 'read:user user:email'
+GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
+GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
+GITHUB_USER_API_URL = 'https://api.github.com/user'
+GITHUB_EMAILS_API_URL = 'https://api.github.com/user/emails'
 
 TEMPLATES = [
     {
@@ -68,4 +108,19 @@ TEMPLATES = [
         },
     },
 ]
-#xd
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
