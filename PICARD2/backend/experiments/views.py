@@ -1,6 +1,5 @@
 # experiments/views.py
 import os
-
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse
 
@@ -29,7 +28,6 @@ def _serialize_experiment_summary(experiment):
         "has_result": os.path.exists(result_path),
         "result_url": f"/experiments/{experiment.id}/result/" if os.path.exists(result_path) else '',
     }
-
 # 1. GET: List all experiments for the logged-in user
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -159,7 +157,6 @@ def run_experiment(request, experiment_id):  # <-- New Method
             {"experiment_id": experiment.id, "status": "Queued", "message": "Experiment added to queue"})
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Experiment not found or access denied"}, status=404)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

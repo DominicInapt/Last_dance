@@ -26,6 +26,9 @@ RUN apt-get update && \
 # 2. Install PySpark
 RUN pip install --no-cache-dir pyspark==3.5.0
 
+# Install Docker CLI so the backend can scale containers
+RUN apt-get update && apt-get install -y docker.io
+
 # Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
