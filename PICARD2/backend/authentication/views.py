@@ -206,6 +206,20 @@ def github_callback(request):
             verified_email = next((item for item in emails if item.get('verified')), None)
             email = (primary_email or verified_email or {}).get('email')
 
+    #Gemini{ Fetch user organizations
+    orgs_response = requests.get('https://api.github.com/user/orgs', headers=headers, timeout=15)
+    if not orgs_response.ok:
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'org_fetch_failed'))
+
+    orgs = orgs_response.json()
+
+    # Check for the specific organization
+    REQUIRED_ORG = 'ThePICARDProject'
+    is_member = any(org.get('login').lower() == REQUIRED_ORG.lower() for org in orgs)
+
+    if not is_member:
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'unauthorized_org'))
+    #}Gemini
     user = _upsert_github_user(profile, email)
     login(request, user)
     request.session['github_profile'] = {

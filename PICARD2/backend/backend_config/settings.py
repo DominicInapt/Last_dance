@@ -96,7 +96,7 @@ GITHUB_OAUTH_APPS = {
     },
 }
 
-GITHUB_OAUTH_SCOPE = 'read:user user:email'
+GITHUB_OAUTH_SCOPE = 'read:user user:email read:org'
 GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
 GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 GITHUB_USER_API_URL = 'https://api.github.com/user'
