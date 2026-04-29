@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     restart: always
     env_file:
-      - .env
+      - ./backend/.env
     #Persistent storage for mysql server
     volumes:
       - db_data:/var/lib/mysql
@@ -26,7 +26,7 @@ services:
     ports:
       - "5000:5000"
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
     depends_on:
@@ -38,7 +38,7 @@ services:
     volumes:
       - ./backend:/app
     env_file:
-      - .env
+      - ./backend/.env
     depends_on:
       - db
       - redis
