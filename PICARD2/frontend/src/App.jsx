@@ -10,7 +10,7 @@ function RequireAuth({ children }) {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    return null
+    return <Landing />
   }
 
   if (!isAuthenticated) {

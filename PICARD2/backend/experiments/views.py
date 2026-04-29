@@ -1,6 +1,8 @@
 # experiments/views.py
+import os
+
 from django.db.models import Q
-from django.http import  JsonResponse
+from django.http import FileResponse, JsonResponse
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -10,23 +12,33 @@ from scripts.models import Script
 from .models import SparkExperiment, PUBLIC
 from .tasks import run_db_script
 
+
+def _get_result_path(experiment):
+    shared_dir = os.environ.get('SPARK_SHARED_DIR', '/opt/spark/apps')
+    return os.path.join(shared_dir, f'{experiment.id}_results.txt')
+
+
+def _serialize_experiment_summary(experiment):
+    result_path = _get_result_path(experiment)
+    return {
+        "id": experiment.id,
+        "script_name": experiment.script.name,
+        "dataset_name": experiment.dataset.name if experiment.dataset else '',
+        "status": experiment.status,
+        "created_at": experiment.created_at,
+        "has_result": os.path.exists(result_path),
+        "result_url": f"/experiments/{experiment.id}/result/" if os.path.exists(result_path) else '',
+    }
+
 # 1. GET: List all experiments for the logged-in user
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_experiments(request):
     # Fetch experiments belonging to the user, newest first
-    experiments = SparkExperiment.objects.filter(user=request.user).order_by('-created_at')
+    experiments = SparkExperiment.objects.select_related('script', 'dataset').filter(user=request.user).order_by('-created_at')
 
     # Format the data for the frontend
-    experiment_data = []
-    for exp in experiments:
-        experiment_data.append({
-            "id": exp.id,
-            "script_name": exp.script.name,
-            "dataset_name": exp.dataset.file.name,
-            "status": exp.status,
-            "created_at": exp.created_at
-        })
+    experiment_data = [_serialize_experiment_summary(exp) for exp in experiments]
 
     return JsonResponse(experiment_data, safe=False)
 
@@ -36,10 +48,16 @@ def list_experiments(request):
 def get_experiment_detail(request, experiment_id):
     try:
         exp = SparkExperiment.objects.get(id=experiment_id, user=request.user)
+        result_path = _get_result_path(exp)
         return JsonResponse({
             "id": exp.id,
+            "script_name": exp.script.name,
+            "dataset_name": exp.dataset.name if exp.dataset else '',
             "status": exp.status,
-            "output": exp.output
+            "output": exp.output,
+            "created_at": exp.created_at,
+            "has_result": os.path.exists(result_path),
+            "result_url": f"/experiments/{exp.id}/result/" if os.path.exists(result_path) else '',
         })
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
@@ -141,3 +159,35 @@ def run_experiment(request, experiment_id):  # <-- New Method
             {"experiment_id": experiment.id, "status": "Queued", "message": "Experiment added to queue"})
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Experiment not found or access denied"}, status=404)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_experiment_result(request, experiment_id):
+    try:
+        experiment = SparkExperiment.objects.get(id=experiment_id, user=request.user)
+    except SparkExperiment.DoesNotExist:
+        return JsonResponse({"error": "Experiment not found or access denied"}, status=404)
+
+    result_path = _get_result_path(experiment)
+    if not os.path.exists(result_path):
+        return JsonResponse({"error": "Result file not found"}, status=404)
+
+    return FileResponse(open(result_path, 'rb'), as_attachment=True, filename=os.path.basename(result_path))
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_experiment(request, experiment_id):
+    try:
+        experiment = SparkExperiment.objects.get(id=experiment_id, user=request.user)
+    except SparkExperiment.DoesNotExist:
+        return JsonResponse({"error": "Experiment not found or access denied"}, status=404)
+
+    result_path = _get_result_path(experiment)
+    experiment.delete()
+
+    if os.path.exists(result_path):
+        os.remove(result_path)
+
+    return JsonResponse({"message": "Experiment deleted successfully"}, status=200)

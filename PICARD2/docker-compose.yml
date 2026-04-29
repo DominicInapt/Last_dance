@@ -8,7 +8,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "${MYSQL_PORT:-3307}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -21,14 +21,14 @@ services:
     restart: always
     #Suggested so that it can live update instead of rebuilding docker image.
     volumes:
-      - .:/backend 
-      - ./spark-apps:/opt/bitnami/spark/apps:rw
+      - ./backend:/app
+      - ./spark-apps:/opt/spark/apps:rw
     ports:
       - "5000:5000"
     env_file:
       - ./backend/.env
     environment:
-      - SPARK_SHARED_DIR=/opt/bitnami/spark/apps
+      - SPARK_SHARED_DIR=/opt/spark/apps
     depends_on:
       db:
         condition: service_healthy
@@ -37,8 +37,11 @@ services:
     command: celery -A backend_config worker --concurrency=1 --loglevel=info
     volumes:
       - ./backend:/app
+      - ./spark-apps:/opt/spark/apps:rw
     env_file:
       - ./backend/.env
+    environment:
+      - SPARK_SHARED_DIR=/opt/spark/apps
     depends_on:
       - db
       - redis

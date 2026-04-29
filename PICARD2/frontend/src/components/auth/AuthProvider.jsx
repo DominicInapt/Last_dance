@@ -1,43 +1,42 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { apiRequest, buildApiUrl } from '../../lib/api'
 
 const AuthContext = createContext(null)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState(null)
   const [authError, setAuthError] = useState('')
+  const [csrfToken, setCsrfToken] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadSession() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/session/`, {
-          credentials: 'include',
-        })
-        const data = await response.json()
-
-        if (cancelled) {
-          return
-        }
-
-        setIsAuthenticated(Boolean(data.authenticated))
-        setUser(data.user || null)
-      } catch {
-        if (!cancelled) {
-          setIsAuthenticated(false)
-          setUser(null)
-          setAuthError('Unable to reach the backend authentication service.')
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
+  async function refreshSession({ silent = false } = {}) {
+    if (!silent) {
+      setIsLoading(true)
     }
 
+    try {
+      const data = await apiRequest('/auth/session/')
+      setIsAuthenticated(Boolean(data.authenticated))
+      setUser(data.user || null)
+      setCsrfToken(data.csrfToken || '')
+
+      if (data.authenticated) {
+        setAuthError('')
+      }
+    } catch {
+      setIsAuthenticated(false)
+      setUser(null)
+      setCsrfToken('')
+      setAuthError('Unable to reach the backend authentication service.')
+    } finally {
+      if (!silent) {
+        setIsLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const authStatus = params.get('auth')
     const reason = params.get('reason')
@@ -56,35 +55,42 @@ export function AuthProvider({ children }) {
       window.history.replaceState({}, '', nextUrl)
     }
 
-    loadSession()
-
-    return () => {
-      cancelled = true
-    }
+    refreshSession().catch(() => undefined)
   }, [])
 
   function login() {
-    const loginUrl = new URL(`${API_BASE_URL}/auth/github/login/`)
+    setAuthError('')
+    const loginUrl = new URL(buildApiUrl('/auth/github/login/'), window.location.origin)
     loginUrl.searchParams.set('origin', window.location.origin)
     window.location.assign(loginUrl.toString())
   }
 
   async function logout() {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout/`, {
+      await apiRequest('/auth/logout/', {
         method: 'POST',
-        credentials: 'include',
+        csrfToken,
       })
     } finally {
       setAuthError('')
       setIsAuthenticated(false)
       setUser(null)
+      setCsrfToken('')
     }
   }
 
   const value = useMemo(() => {
-    return { authError, isAuthenticated, isLoading, login, logout, user }
-  }, [authError, isAuthenticated, isLoading, user])
+    return {
+      authError,
+      csrfToken,
+      isAuthenticated,
+      isLoading,
+      login,
+      logout,
+      refreshSession,
+      user,
+    }
+  }, [authError, csrfToken, isAuthenticated, isLoading, user])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

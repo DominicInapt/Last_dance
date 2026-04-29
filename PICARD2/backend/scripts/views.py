@@ -5,8 +5,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from datasets.models import PRIVATE, PUBLIC
-from scripts.models import Script
+from scripts.models import PRIVATE, PUBLIC, Script
 
 # 1. GET: List all experiments for the logged-in user
 @api_view(['GET'])
@@ -15,15 +14,30 @@ def list_scripts(request):
     # Logic: Show scripts I own OR scripts that are marked public
     scripts = Script.objects.filter(
         Q(user=request.user) | Q(access_level=PUBLIC)
-    ).values('id', 'name', 'access_level', 'user_id', 'created_at')
+    ).select_related('user').order_by('-created_at')
 
-    return JsonResponse(list(scripts), safe=False)
+    script_data = []
+    for script in scripts:
+        script_data.append({
+            'id': script.id,
+            'name': script.name,
+            'file_type': script.file_type,
+            'access_level': script.access_level,
+            'owner': script.user.username,
+            'created_at': script.created_at,
+            'main_class': script.main_class,
+        })
+
+    return JsonResponse(script_data, safe=False)
 
 # 5. POST: Upload and save script to DB
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_script(request):
     file = request.FILES.get('script')
+    if not file:
+        return JsonResponse({"error": "A script file is required"}, status=400)
+
     # User can optionally pass access_level in the request
     access = request.data.get('access_level', PRIVATE)
     main_class = request.data.get('main_class') # Will be None if not provided
@@ -40,3 +54,15 @@ def upload_script(request):
         main_class = main_class
     )
     return JsonResponse({"script_id": script.id, "access_level": script.access_level})
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_script(request, script_id):
+    try:
+        script = Script.objects.get(id=script_id, user=request.user)
+    except Script.DoesNotExist:
+        return JsonResponse({"error": "Script not found or access denied"}, status=404)
+
+    script.delete()
+    return JsonResponse({"message": "Script deleted successfully"}, status=200)

@@ -13,10 +13,16 @@ from .serializers import CSVDatasetSerializer
 @permission_classes([IsAuthenticated])
 def upload_csv(request):
     serializer = CSVDatasetSerializer(data=request.data)
+    uploaded_file = request.FILES.get('file')
+
+    if not uploaded_file:
+        return JsonResponse({
+            'status': 'error',
+            'errors': {'file': ['A CSV file is required.']}
+        }, status=400)
 
     if serializer.is_valid():
         # Fallback: if 'name' isn't explicitly sent in the form data, use the filename
-        uploaded_file = request.FILES.get('file')
         dataset_name = request.data.get('name', uploaded_file.name)
 
         # Save the dataset to the DB and disk simultaneously
@@ -50,8 +56,23 @@ def list_datasets(request):
         dataset_data.append({
             "id": ds.id,
             "name": ds.name,
+            "file_name": os.path.basename(ds.file.name),
             "access_level": ds.access_level,
-            "owner": ds.user.username # Helpful for the frontend to distinguish ownership
+            "owner": ds.user.username,
+            "uploaded_at": ds.uploaded_at,
         })
 
-    return JsonResponse(dataset_data, status=200)
+    return JsonResponse(dataset_data, safe=False, status=200)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_dataset(request, dataset_id):
+    try:
+        dataset = CSVDataset.objects.get(id=dataset_id, user=request.user)
+    except CSVDataset.DoesNotExist:
+        return JsonResponse({"error": "Dataset not found or access denied"}, status=404)
+
+    dataset.file.delete(save=False)
+    dataset.delete()
+    return JsonResponse({"message": "Dataset deleted successfully"}, status=200)

@@ -5,6 +5,7 @@ import requests
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.middleware.csrf import get_token
 
 from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -237,8 +238,10 @@ def github_callback(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def auth_session(request):
+    csrf_token = get_token(request)
+
     if not request.user.is_authenticated:
-        return JsonResponse({'authenticated': False}, status=200)
+        return JsonResponse({'authenticated': False, 'csrfToken': csrf_token}, status=200)
 
     github_profile = request.session.get('github_profile', {})
     return JsonResponse(
@@ -252,6 +255,7 @@ def auth_session(request):
                 'avatar_url': github_profile.get('avatar_url', ''),
                 'profile_url': github_profile.get('profile_url', ''),
             },
+            'csrfToken': csrf_token,
         },
         status=200,
     )

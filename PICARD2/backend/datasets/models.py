@@ -28,8 +28,8 @@ class CSVDataset(models.Model):
 
     # helper method so you can easily retrieve the path
     def get_file_path(self):
-        # Save into a 'data' subfolder inside the shared Spark volume
-        return os.path.join(SHARED_DIR, "data", f"{self.id}.csv")
+        filename = os.path.basename(self.file.name) if self.file else f"{self.id}.csv"
+        return os.path.join(SHARED_DIR, "data", filename)
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
