@@ -11,4 +11,6 @@ urlpatterns = [
     #run an experiment
     path('run/<int:script_id>/scripts/', views.run_experiment, name='run_script'),
     path('run/<int:experiment_id>/experiments/', views.run_experiment, name='run_experiment'),
+    #Cluster modification
+    path('scale/', views.scale_spark_workers, name='scale_workers'),
 ]

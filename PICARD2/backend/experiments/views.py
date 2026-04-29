@@ -1,4 +1,5 @@
 # experiments/views.py
+import subprocess
 from django.db.models import Q
 from django.http import  JsonResponse
 
@@ -9,6 +10,7 @@ from datasets.models import CSVDataset
 from scripts.models import Script
 from .models import SparkExperiment, PUBLIC
 from .tasks import run_db_script
+
 
 # 1. GET: List all experiments for the logged-in user
 @api_view(['GET'])
@@ -141,3 +143,42 @@ def run_experiment(request, experiment_id):  # <-- New Method
             {"experiment_id": experiment.id, "status": "Queued", "message": "Experiment added to queue"})
     except SparkExperiment.DoesNotExist:
         return JsonResponse({"error": "Experiment not found or access denied"}, status=404)
+
+# 6. POST: Scale the spark workers
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def scale_spark_workers(request):
+    try:
+        # Get the desired number of workers (default to 1)
+        num_workers = int(request.data.get('workers', 1))
+
+        if num_workers < 1:
+            return JsonResponse({"error": "Must have at least 1 worker."}, status=400)
+
+        # Because of the volume mount `- .:/backend`, the compose file is at /backend/docker-compose.yml
+        cmd = [
+            "docker", "compose",
+            "-f", "/backend/docker-compose.yml",
+            "up", "-d",
+            "--scale", f"spark-worker={num_workers}",
+            "--no-recreate"
+        ]
+
+        # Execute the command
+        process = subprocess.run(cmd, capture_output=True, text=True)
+
+        if process.returncode == 0:
+            return JsonResponse({
+                "status": "success",
+                "message": f"Successfully scaled spark workers to {num_workers}."
+            }, status=200)
+        else:
+            return JsonResponse({
+                "error": "Failed to scale workers.",
+                "details": process.stderr
+            }, status=500)
+
+    except ValueError:
+        return JsonResponse({"error": "Invalid worker count provided."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

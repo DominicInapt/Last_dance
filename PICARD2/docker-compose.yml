@@ -23,6 +23,7 @@ services:
     volumes:
       - .:/backend 
       - ./spark-apps:/opt/bitnami/spark/apps:rw
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "5000:5000"
     env_file:
