@@ -100,10 +100,14 @@ export function WorkspaceProvider({ children }) {
     return payload
   }
 
-  async function uploadScript({ accessLevel, file, mainClass }) {
+  async function uploadScript({ accessLevel, file, mainClass, name }) {
     const formData = new FormData()
     formData.append('script', file)
     formData.append('access_level', accessLevel)
+
+    if (name.trim()) {
+      formData.append('name', name.trim())
+    }
 
     if (mainClass.trim()) {
       formData.append('main_class', mainClass.trim())

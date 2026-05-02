@@ -40,6 +40,7 @@ def upload_script(request):
 
     # User can optionally pass access_level in the request
     access = request.data.get('access_level', PRIVATE)
+    display_name = request.data.get('name', '').strip() or file.name
     main_class = request.data.get('main_class') # Will be None if not provided
 
     _, extension = os.path.splitext(file.name)
@@ -47,7 +48,7 @@ def upload_script(request):
 
     script = Script.objects.create(
         user=request.user,
-        name=file.name,
+        name=display_name,
         file_type=file_type,
         content=file.read(),
         access_level=access,

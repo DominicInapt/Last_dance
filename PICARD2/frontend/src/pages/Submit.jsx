@@ -17,7 +17,7 @@ export default function Submit() {
     uploadScript,
   } = useWorkspace()
   const [datasetForm, setDatasetForm] = useState({ accessLevel: 'private', file: null, name: '' })
-  const [scriptForm, setScriptForm] = useState({ accessLevel: 'private', file: null, mainClass: '' })
+  const [scriptForm, setScriptForm] = useState({ accessLevel: 'private', file: null, mainClass: '', name: '' })
   const [experimentForm, setExperimentForm] = useState({ datasetId: '', scriptId: '' })
   const [datasetSearch, setDatasetSearch] = useState('')
   const [scriptSearch, setScriptSearch] = useState('')
@@ -96,8 +96,9 @@ export default function Submit() {
         accessLevel: scriptForm.accessLevel,
         file: scriptForm.file,
         mainClass: scriptForm.mainClass,
+        name: scriptForm.name,
       })
-      setScriptForm({ accessLevel: 'private', file: null, mainClass: '' })
+      setScriptForm({ accessLevel: 'private', file: null, mainClass: '', name: '' })
       setFeedback({ tone: 'success', text: 'Algorithm uploaded successfully.' })
     } catch (error) {
       setFeedback({ tone: 'error', text: error instanceof Error ? error.message : 'Algorithm upload failed.' })
@@ -228,14 +229,13 @@ export default function Submit() {
           <form className="lcars-form" onSubmit={handleScriptUpload}>
             <div className="form-grid">
               <label className="field">
-                <span>Visibility</span>
-                <select
-                  value={scriptForm.accessLevel}
-                  onChange={(event) => setScriptForm((current) => ({ ...current, accessLevel: event.target.value }))}
-                >
-                  <option value="private">Private</option>
-                  <option value="public">Public</option>
-                </select>
+                <span>Display name</span>
+                <input
+                  type="text"
+                  value={scriptForm.name}
+                  onChange={(event) => setScriptForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Optional algorithm name"
+                />
               </label>
               <label className="field">
                 <span>JAR main class</span>
@@ -245,6 +245,16 @@ export default function Submit() {
                   onChange={(event) => setScriptForm((current) => ({ ...current, mainClass: event.target.value }))}
                   placeholder="Required for .jar uploads"
                 />
+              </label>
+              <label className="field">
+                <span>Visibility</span>
+                <select
+                  value={scriptForm.accessLevel}
+                  onChange={(event) => setScriptForm((current) => ({ ...current, accessLevel: event.target.value }))}
+                >
+                  <option value="private">Private</option>
+                  <option value="public">Public</option>
+                </select>
               </label>
             </div>
             <label className="field">
