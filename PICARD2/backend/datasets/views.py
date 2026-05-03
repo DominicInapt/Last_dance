@@ -72,7 +72,7 @@ def delete_dataset(request, dataset_id):
         dataset = CSVDataset.objects.get(id=dataset_id, user=request.user)
     except CSVDataset.DoesNotExist:
         return JsonResponse({"error": "Dataset not found or access denied"}, status=404)
-
-    dataset.file.delete(save=False)
+    if dataset.file:
+        dataset.file.delete(save=False)
     dataset.delete()
     return JsonResponse({"message": "Dataset deleted successfully"}, status=200)

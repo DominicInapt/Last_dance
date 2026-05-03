@@ -1,6 +1,5 @@
 # datasets/models.py
-import os
-
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -8,8 +7,9 @@ from django.contrib.auth.models import User
 PRIVATE = 'private'
 PUBLIC = 'public'
 
-# The only service using the datasets is the spark cluster so it makes some sense to store them there.
-SHARED_DIR = os.environ.get('SPARK_SHARED_DIR', '/opt/spark/apps')
+def dataset_file_path(instance, filename):
+    # Saves exactly to: <MEDIA_ROOT>/files/datasets/<UUID>.csv
+    return f'files/datasets/{instance.id}.csv'
 
 class CSVDataset(models.Model):
     ACCESS_CHOICES = [
@@ -17,19 +17,20 @@ class CSVDataset(models.Model):
         (PUBLIC, 'Public'),
     ]
 
-    user = models.ForeignKey(User,on_delete=models.CASCADE,related_name='datasets')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='datasets')
     name = models.CharField(max_length=255, default="Unnamed Dataset")
     access_level = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=PRIVATE)
 
-    # NEW: Django's native FileField handles the saving and chunking automatically
-    file = models.FileField(upload_to='data/')
+    file = models.FileField(upload_to=dataset_file_path)
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    # helper method so you can easily retrieve the path
-    def get_file_path(self):
-        filename = os.path.basename(self.file.name) if self.file else f"{self.id}.csv"
-        return os.path.join(SHARED_DIR, "data", filename)
+    def get_absolute_file_path(self):
+        # Django natively knows the absolute path on your backend server
+        if self.file:
+            return self.file.path
+        return None
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"

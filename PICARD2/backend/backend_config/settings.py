@@ -41,7 +41,7 @@ WSGI_APPLICATION = 'backend_config.wsgi.application'
 
 # Point the MEDIA_ROOT to the shared Docker volume.
 # We use a fallback to a local 'media' folder so it doesn't crash if run outside Docker.
-MEDIA_ROOT = os.environ.get('SPARK_SHARED_DIR', os.path.join(BASE_DIR, 'media'))
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 INSTALLED_APPS = [
     # 1. Default Django apps (Core functionality)
     'django.contrib.admin',

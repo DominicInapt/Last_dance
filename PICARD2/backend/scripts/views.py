@@ -50,7 +50,7 @@ def upload_script(request):
         user=request.user,
         name=display_name,
         file_type=file_type,
-        content=file.read(),
+        file=file,
         access_level=access,
         main_class = main_class
     )
@@ -64,6 +64,7 @@ def delete_script(request, script_id):
         script = Script.objects.get(id=script_id, user=request.user)
     except Script.DoesNotExist:
         return JsonResponse({"error": "Script not found or access denied"}, status=404)
-
+    if script.file:
+        script.file.delete(save=False)
     script.delete()
     return JsonResponse({"message": "Script deleted successfully"}, status=200)
