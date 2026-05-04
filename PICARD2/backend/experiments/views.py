@@ -23,6 +23,7 @@ def _serialize_experiment_summary(experiment):
         "id": experiment.id,
         "script_name": experiment.script.name,
         "dataset_name": experiment.dataset.name if experiment.dataset else '',
+        "args": getattr(experiment, 'args', ''),  # <-- NEW: Include args
         "status": experiment.status,
         "created_at": experiment.created_at,
         "has_result": os.path.exists(result_path),
@@ -66,6 +67,7 @@ def get_experiment_detail(request, experiment_id):
 def create_experiment(request):
     script_id = request.data.get('script_id')
     dataset_id = request.data.get('dataset_id')
+    args = request.data.get('args', '')
 
     if not script_id or not dataset_id:
         return JsonResponse({"error": "Both script_id and dataset_id are required"}, status=400)
@@ -87,6 +89,7 @@ def create_experiment(request):
             user=request.user,
             script=script,
             dataset=dataset,
+            args=args,
             status='Pending'
         )
 
@@ -107,6 +110,7 @@ def create_experiment(request):
 def run_script(request, script_id):
     # Get dataset_id from POST data
     dataset_id = request.data.get('dataset_id')
+    args = request.data.get('args', '')
 
     if not dataset_id:
         return JsonResponse({"error": "dataset_id is required"}, status=400)
@@ -126,6 +130,7 @@ def run_script(request, script_id):
             user=request.user,
             script=script,
             dataset=dataset,
+            args=args,
             status='Queued'
         )
         # Pass the experiment ID to the worker
