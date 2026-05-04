@@ -23,11 +23,14 @@ def experiment_result_path(instance, filename):
 
 class SparkExperiment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     script = models.ForeignKey(Script, on_delete=models.CASCADE, related_name='runs')
     dataset = models.ForeignKey(CSVDataset, on_delete=models.CASCADE, null=True, blank=True)
+    #specific details on experiment.
     status = models.CharField(max_length=20, default='Pending')
-
+    args = models.TextField(default='')
+    #input output
     output = models.FileField(upload_to=experiment_output_path, null=True, blank=True)
     result = models.FileField(upload_to=experiment_result_path, null=True, blank=True)
 
