@@ -18,7 +18,7 @@ export default function Submit() {
   } = useWorkspace()
   const [datasetForm, setDatasetForm] = useState({ accessLevel: 'private', file: null, name: '' })
   const [scriptForm, setScriptForm] = useState({ accessLevel: 'private', file: null, mainClass: '', name: '' })
-  const [experimentForm, setExperimentForm] = useState({ datasetId: '', scriptId: '' })
+  const [experimentForm, setExperimentForm] = useState({ datasetId: '', scriptId: '', args: '' })
   const [datasetSearch, setDatasetSearch] = useState('')
   const [scriptSearch, setScriptSearch] = useState('')
   const [feedback, setFeedback] = useState({ tone: '', text: '' })
@@ -123,6 +123,7 @@ export default function Submit() {
       const result = await createExperiment({
         datasetId: experimentForm.datasetId,
         scriptId: experimentForm.scriptId,
+        args: experimentForm.args,
       })
       setFeedback({ tone: 'success', text: `Experiment ${result.experiment_id} created and ready to queue.` })
     } catch (error) {
@@ -303,6 +304,15 @@ export default function Submit() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="field" style={{ marginTop: '1rem' }}>
+              <span>Arguments (Optional)</span>
+              <input
+                type="text"
+                value={experimentForm.args}
+                onChange={(event) => setExperimentForm((current) => ({ ...current, args: event.target.value }))}
+                placeholder="e.g., --param1 value1 --param2 value2"
+              />
             </label>
           </div>
           <p className="helper-text">New experiments are created in a pending state. Queue or re-run them from the runs console.</p>

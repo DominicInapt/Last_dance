@@ -133,12 +133,13 @@ export function WorkspaceProvider({ children }) {
     return payload
   }
 
-  async function createExperiment({ datasetId, scriptId }) {
+  async function createExperiment({ datasetId, scriptId, args }) {
     const payload = await apiRequest('/experiments/create/', {
       method: 'POST',
       body: {
-        dataset_id: Number(datasetId),
-        script_id: Number(scriptId),
+        dataset_id: datasetId,
+        script_id: scriptId,
+		args: args || '',
       },
       csrfToken,
     })
