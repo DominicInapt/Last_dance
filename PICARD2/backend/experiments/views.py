@@ -45,15 +45,21 @@ def list_experiments(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_experiment_detail(request, experiment_id):
+
     try:
         exp = SparkExperiment.objects.get(id=experiment_id, user=request.user)
+        output = "No output yet"
+        if os.path.exists(exp.get_absolute_output_path()):
+            with open(exp.get_absolute_output_path(), 'r') as f:
+                output = f.read()
+
         result_path = _get_result_path(exp)
         return JsonResponse({
             "id": exp.id,
             "script_name": exp.script.name,
             "dataset_name": exp.dataset.name if exp.dataset else '',
             "status": exp.status,
-            "output": "not implemented yet",
+            "output": output,
             "created_at": exp.created_at,
             "has_result": os.path.exists(result_path),
             "result_url": f"/experiments/{exp.id}/result/" if os.path.exists(result_path) else '',
