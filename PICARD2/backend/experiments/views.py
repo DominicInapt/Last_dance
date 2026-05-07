@@ -17,6 +17,18 @@ def _get_result_path(experiment):
     return os.path.join(shared_dir, f'{experiment.id}_results.txt')
 
 
+def _get_output_text(experiment):
+    if not experiment.output:
+        return ''
+
+    output_path = experiment.get_absolute_output_path()
+    if not output_path or not os.path.exists(output_path):
+        return ''
+
+    with open(output_path, 'r', encoding='utf-8', errors='replace') as output_file:
+        return output_file.read()
+
+
 def _serialize_experiment_summary(experiment):
     result_path = _get_result_path(experiment)
     return {
@@ -53,7 +65,7 @@ def get_experiment_detail(request, experiment_id):
             "script_name": exp.script.name,
             "dataset_name": exp.dataset.name if exp.dataset else '',
             "status": exp.status,
-            "output": exp.output,
+            "output": _get_output_text(exp),
             "created_at": exp.created_at,
             "has_result": os.path.exists(result_path),
             "result_url": f"/experiments/{exp.id}/result/" if os.path.exists(result_path) else '',

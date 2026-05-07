@@ -47,21 +47,44 @@ def user_login(request):
         return JsonResponse({"status": "login success"}, status=200)
     return JsonResponse({"status": "login failed"}, status=401)
 
+
+def _get_default_frontend_origin(target_config):
+    frontend_url = (target_config.get('frontend_url') or '').rstrip('/')
+    if frontend_url:
+        return frontend_url
+
+    frontend_aliases = target_config.get('frontend_aliases') or []
+    return next((origin.rstrip('/') for origin in frontend_aliases if origin), '')
+
+
 def _get_frontend_target(frontend_origin=None):
     if frontend_origin:
         normalized_origin = frontend_origin.rstrip('/')
         for target_name, config in settings.GITHUB_OAUTH_APPS.items():
-            if config.get('frontend_url') == normalized_origin:
-                return target_name, config
+            allowed_origins = {
+                (config.get('frontend_url') or '').rstrip('/'),
+                *((origin or '').rstrip('/') for origin in config.get('frontend_aliases', [])),
+            }
+            if normalized_origin in allowed_origins:
+                return target_name, config, normalized_origin
 
     local_config = settings.GITHUB_OAUTH_APPS['local']
-    if local_config.get('frontend_url'):
-        return 'local', local_config
+    default_local_origin = _get_default_frontend_origin(local_config)
+    if default_local_origin:
+        return 'local', local_config, default_local_origin
 
     raise ValueError('No GitHub OAuth frontend URL has been configured.')
 
-def _build_frontend_redirect(target_config, status, reason=''):
-    base_url = target_config.get('frontend_url', '').rstrip('/')
+
+def _get_github_callback_url(request, target_config):
+    configured_callback_url = (target_config.get('callback_url') or '').rstrip('/')
+    if configured_callback_url:
+        return configured_callback_url
+    return request.build_absolute_uri('/auth/github/callback/').rstrip('/')
+
+
+def _build_frontend_redirect(target_config, status, reason='', frontend_origin=''):
+    base_url = (frontend_origin or _get_default_frontend_origin(target_config)).rstrip('/')
     query = {'auth': status}
     if reason:
         query['reason'] = reason
@@ -125,7 +148,7 @@ def _upsert_github_user(profile, email):
 def github_login(request):
     frontend_origin = request.GET.get('origin', '').rstrip('/')
     try:
-        target_name, target_config = _get_frontend_target(frontend_origin)
+        target_name, target_config, redirect_origin = _get_frontend_target(frontend_origin)
     except ValueError as exc:
         return JsonResponse({'error': str(exc)}, status=400)
 
@@ -140,10 +163,13 @@ def github_login(request):
     state = secrets.token_urlsafe(32)
     request.session['github_oauth_state'] = state
     request.session['github_oauth_target'] = target_name
+    request.session['github_oauth_origin'] = redirect_origin
+
+    callback_url = _get_github_callback_url(request, target_config)
 
     params = {
         'client_id': client_id,
-        'redirect_uri': request.build_absolute_uri('/auth/github/callback/'),
+        'redirect_uri': callback_url,
         'scope': settings.GITHUB_OAUTH_SCOPE,
         'state': state,
     }
@@ -154,22 +180,24 @@ def github_login(request):
 def github_callback(request):
     target_name = request.session.get('github_oauth_target', 'local')
     target_config = settings.GITHUB_OAUTH_APPS.get(target_name, settings.GITHUB_OAUTH_APPS['local'])
+    frontend_origin = request.session.get('github_oauth_origin', '')
     expected_state = request.session.get('github_oauth_state')
     returned_state = request.GET.get('state')
 
     if not expected_state or expected_state != returned_state:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'state_mismatch'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'state_mismatch', frontend_origin))
 
     error = request.GET.get('error')
     if error:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', error))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', error, frontend_origin))
 
     code = request.GET.get('code')
     if not code:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'missing_code'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'missing_code', frontend_origin))
 
     client_id = target_config.get('client_id')
     client_secret = target_config.get('client_secret')
+    callback_url = _get_github_callback_url(request, target_config)
 
     token_response = requests.post(
         settings.GITHUB_TOKEN_URL,
@@ -178,7 +206,7 @@ def github_callback(request):
             'client_id': client_id,
             'client_secret': client_secret,
             'code': code,
-            'redirect_uri': request.build_absolute_uri('/auth/github/callback/'),
+            'redirect_uri': callback_url,
             'state': returned_state,
         },
         timeout=15,
@@ -186,7 +214,7 @@ def github_callback(request):
     token_data = token_response.json()
     access_token = token_data.get('access_token')
     if not token_response.ok or not access_token:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'token_exchange_failed'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'token_exchange_failed', frontend_origin))
 
     headers = {
         'Accept': 'application/vnd.github+json',
@@ -195,7 +223,7 @@ def github_callback(request):
     }
     profile_response = requests.get(settings.GITHUB_USER_API_URL, headers=headers, timeout=15)
     if not profile_response.ok:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'profile_fetch_failed'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'profile_fetch_failed', frontend_origin))
     profile = profile_response.json()
 
     email = profile.get('email')
@@ -210,7 +238,7 @@ def github_callback(request):
     #Gemini{ Fetch user organizations
     orgs_response = requests.get('https://api.github.com/user/orgs', headers=headers, timeout=15)
     if not orgs_response.ok:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'org_fetch_failed'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'org_fetch_failed', frontend_origin))
 
     orgs = orgs_response.json()
 
@@ -219,7 +247,7 @@ def github_callback(request):
     is_member = any(org.get('login').lower() == REQUIRED_ORG.lower() for org in orgs)
 
     if not is_member:
-        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'unauthorized_org'))
+        return HttpResponseRedirect(_build_frontend_redirect(target_config, 'error', 'unauthorized_org', frontend_origin))
     #}Gemini
     user = _upsert_github_user(profile, email)
     login(request, user)
@@ -232,8 +260,9 @@ def github_callback(request):
     }
     request.session.pop('github_oauth_state', None)
     request.session.pop('github_oauth_target', None)
+    request.session.pop('github_oauth_origin', None)
 
-    return HttpResponseRedirect(_build_frontend_redirect(target_config, 'success'))
+    return HttpResponseRedirect(_build_frontend_redirect(target_config, 'success', frontend_origin=frontend_origin))
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

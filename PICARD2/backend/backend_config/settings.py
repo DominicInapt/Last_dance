@@ -2,11 +2,11 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
+
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
@@ -28,6 +28,15 @@ CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 def _split_csv_env(name, default=''):
     raw_value = os.environ.get(name, default)
     return [item.strip() for item in raw_value.split(',') if item.strip()]
+
+
+def _unique_values(*values):
+    unique_values = []
+    for value in values:
+        if not value or value in unique_values:
+            continue
+        unique_values.append(value)
+    return unique_values
 
 
 ALLOWED_HOSTS = _split_csv_env('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0')
@@ -74,9 +83,22 @@ MIDDLEWARE = [
 ]
 
 frontend_local_url = os.environ.get('FRONTEND_LOCAL_URL', 'http://localhost:3000').rstrip('/')
+frontend_local_aliases = _unique_values(
+    frontend_local_url,
+    *_split_csv_env('FRONTEND_LOCAL_URL_ALIASES', frontend_local_url),
+)
 frontend_remote_url = os.environ.get('FRONTEND_REMOTE_URL', '').rstrip('/')
+frontend_remote_aliases = _unique_values(
+    frontend_remote_url,
+    *_split_csv_env('FRONTEND_REMOTE_URL_ALIASES', frontend_remote_url),
+)
+backend_local_url = os.environ.get('BACKEND_LOCAL_URL', '').rstrip('/')
+backend_remote_url = os.environ.get('BACKEND_REMOTE_URL', '').rstrip('/')
 
-CORS_ALLOWED_ORIGINS = [url for url in [frontend_local_url, frontend_remote_url] if url]
+CORS_ALLOWED_ORIGINS = _unique_values(
+    *frontend_local_aliases,
+    *frontend_remote_aliases,
+)
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
@@ -88,11 +110,21 @@ GITHUB_OAUTH_APPS = {
         'client_id': os.environ.get('GITHUB_OAUTH_LOCAL_CLIENT_ID', ''),
         'client_secret': os.environ.get('GITHUB_OAUTH_LOCAL_CLIENT_SECRET', ''),
         'frontend_url': frontend_local_url,
+        'frontend_aliases': frontend_local_aliases,
+        'callback_url': os.environ.get(
+            'GITHUB_OAUTH_LOCAL_CALLBACK_URL',
+            f'{backend_local_url}/auth/github/callback/' if backend_local_url else '',
+        ).rstrip('/'),
     },
     'remote': {
         'client_id': os.environ.get('GITHUB_OAUTH_REMOTE_CLIENT_ID', ''),
         'client_secret': os.environ.get('GITHUB_OAUTH_REMOTE_CLIENT_SECRET', ''),
         'frontend_url': frontend_remote_url,
+        'frontend_aliases': frontend_remote_aliases,
+        'callback_url': os.environ.get(
+            'GITHUB_OAUTH_REMOTE_CALLBACK_URL',
+            f'{backend_remote_url}/auth/github/callback/' if backend_remote_url else '',
+        ).rstrip('/'),
     },
 }
 
