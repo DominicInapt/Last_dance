@@ -53,7 +53,7 @@ def get_experiment_detail(request, experiment_id):
             "script_name": exp.script.name,
             "dataset_name": exp.dataset.name if exp.dataset else '',
             "status": exp.status,
-            "output": exp.output,
+            "output": "not implemented yet",
             "created_at": exp.created_at,
             "has_result": os.path.exists(result_path),
             "result_url": f"/experiments/{exp.id}/result/" if os.path.exists(result_path) else '',
