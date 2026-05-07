@@ -70,34 +70,30 @@ services:
 
   spark-master:
     build: ./spark-cluster
-    environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
     ports:
-      - "8080:8080" # Spark Master Web UI
-      - "7077:7077" # Spark Master service port
+      - "8080:8080" # Execution Service API
     volumes:
-      - ./backend/media:/app/media:ro #Read only for datasets.
-      - ./spark-apps:/opt/spark/apps # Official image uses /opt/spark/
-    command: /opt/spark/sbin/../bin/spark-class org.apache.spark.deploy.master.Master
-
-
-  spark-worker:
-    build: ./spark-cluster
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_CORES=1
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-    ports:
-      - "8081:8081"
-    volumes:
-      - ./backend/media:/app/media:ro #Read only for datasets.
+      - ./backend/media:/app/media:ro # Read only for datasets.
       - ./spark-apps:/opt/spark/apps
-    command: /opt/spark/sbin/../bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-  
-    depends_on:
-      - spark-master
+    command: python /app/server.py
+
+#Removed because apache spark is evil, add back later.
+#  spark-worker:
+#    build: ./spark-cluster
+#    environment:
+#      - SPARK_MODE=worker
+#      - SPARK_MASTER_URL=spark://spark-master:7077
+#      - SPARK_WORKER_CORES=1
+#      - SPARK_WORKER_MEMORY=1G
+#      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+#    ports:
+#      - "8081:8081"
+#    volumes:
+#      - ./backend/media:/app/media:ro #Read only for datasets.
+#      - ./spark-apps:/opt/spark/apps
+#    command: /opt/spark/sbin/../bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+#  
+#    depends_on:
+#      - spark-master
 volumes:
   db_data:

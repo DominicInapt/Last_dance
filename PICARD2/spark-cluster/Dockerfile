@@ -1,11 +1,12 @@
-FROM apache/spark:3.5.8-scala2.12-java17-python3-ubuntu
+FROM python:3.10-slim
 
-# Switch to root to install system-wide Python packages
-USER root
+WORKDIR /app
 
-# Copy requirements and install
+# Copy requirements and install system-wide Python packages
 COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Switch back to the default spark user
-USER 185
+# Copy our simple HTTP executor service
+COPY server.py /app/server.py
+
+EXPOSE 8080
